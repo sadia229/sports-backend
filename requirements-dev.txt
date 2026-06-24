@@ -1,0 +1,10 @@
+# Full local dev dependencies. Install with:  pip install -r requirements-dev.txt
+# Includes the runtime set plus the local server and feature libs that are not
+# yet on the serverless runtime path.
+-r requirements.txt
+
+uvicorn[standard]==0.24.0
+supabase==2.3.5
+redis==5.0.1
+sqlalchemy==2.0.23
+httpx==0.25.2
