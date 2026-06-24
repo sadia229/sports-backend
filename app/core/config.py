@@ -3,10 +3,17 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    # Supabase Configuration
-    SUPABASE_URL: str
-    SUPABASE_ANON_KEY: str
-    SUPABASE_SERVICE_ROLE_KEY: str
+    # Supabase Configuration.
+    # Default to empty so the app can still boot (docs/health) when a deploy is
+    # missing env vars — routes that actually need Supabase raise a clear error
+    # at call time instead of crashing the whole serverless function at import.
+    SUPABASE_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+
+    @property
+    def supabase_configured(self) -> bool:
+        return bool(self.SUPABASE_URL and self.SUPABASE_SERVICE_ROLE_KEY)
 
     # Redis Configuration
     REDIS_URL: str = "redis://localhost:6379"
