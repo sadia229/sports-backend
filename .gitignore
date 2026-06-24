@@ -62,6 +62,9 @@ logs/
 .dmypy.json
 dmypy.json
 
+# Vercel
+.vercel/
+
 # Misc
 .env.test
 .env.production
