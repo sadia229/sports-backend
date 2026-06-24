@@ -1,0 +1,12 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+pydantic[email]==2.5.0
+python-dotenv==1.0.0
+supabase==2.3.5
+redis==5.0.1
+httpx==0.25.2
+email-validator==2.1.0
+sqlalchemy==2.0.23
+PyJWT==2.8.0
