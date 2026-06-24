@@ -1,0 +1,26 @@
+name: Deploy to Vercel (Production)
+
+# Deploys to the production domain on every push to main, and can be run
+# manually from the Actions tab (workflow_dispatch). Using `vercel --prod`
+# guarantees the live domain (sportsbd.vercel.app) updates — no manual promote.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Deploy to Production
+        run: vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
