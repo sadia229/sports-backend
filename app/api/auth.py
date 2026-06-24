@@ -1,11 +1,14 @@
+import httpx
 from fastapi import APIRouter, HTTPException, status, Depends, Query, Body, BackgroundTasks
 from pydantic import BaseModel, EmailStr, Field
+from app.core.config import settings
 from app.core.security import get_current_user, TokenData
 from app.services.email import (
     generate_verification_code,
     send_verification_email,
     verify_code,
 )
+from app.services import supabase_rest
 from datetime import datetime
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -37,14 +40,37 @@ class SignoutRequest(BaseModel):
 @router.post("/signup")
 async def signup(request: SignupRequest, background_tasks: BackgroundTasks) -> dict:
     """
-    Register a new user with Supabase Auth.
+    Register a new user — inserts a row into the Supabase `users` table.
 
-    - Email must be unique
+    - Email and username must be unique
     - Password minimum 8 characters
-    - Username 3-20 characters, unique
     - Queues a verification code email (sent in the background)
-    - Returns JWT token for immediate authentication
     """
+    if not settings.supabase_configured:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database not configured (SUPABASE_* env vars missing)."
+        )
+
+    # Insert the user profile into Supabase. (Real password auth would go through
+    # Supabase Auth; here we persist the profile row so it shows up in the DB.)
+    try:
+        user = await supabase_rest.insert("users", {
+            "email": request.email,
+            "username": request.username,
+        })
+    except httpx.HTTPStatusError as exc:
+        # 23505 = unique violation (duplicate email/username)
+        if exc.response.status_code == 409 or "duplicate" in exc.response.text.lower():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email or username already registered."
+            )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Database error: {exc.response.text[:200]}"
+        )
+
     # Generate the code now (fast), send the email after the response is returned.
     code = generate_verification_code(request.email)
     background_tasks.add_task(send_verification_email, request.email, code)
@@ -52,11 +78,11 @@ async def signup(request: SignupRequest, background_tasks: BackgroundTasks) -> d
     return {
         "success": True,
         "data": {
-            "user_id": "user_123",
-            "email": request.email,
-            "username": request.username,
-            "access_token": "eyJhbGciOiJIUzI1NiIs...",
-            "token_type": "bearer",
+            "user_id": user.get("id"),
+            "email": user.get("email"),
+            "username": user.get("username"),
+            "total_points": user.get("total_points", 0),
+            "created_at": user.get("created_at"),
             "email_verified": False
         },
         "error": None,
